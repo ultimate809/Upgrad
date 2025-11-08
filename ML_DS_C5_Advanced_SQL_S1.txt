@@ -1,0 +1,183 @@
+﻿DROP DATABASE IF EXISTS MarketData;
+-- Create the database
+CREATE DATABASE MarketData;
+USE MarketData;
+
+
+-- Create Market Fact Table
+CREATE TABLE market_fact_full (
+    Record_ID INT,
+    Order_ID VARCHAR(20),
+    Product_ID VARCHAR(20),
+    Shipping_ID VARCHAR(20),
+    Customer_ID VARCHAR(20),
+    Sales_Amount DECIMAL(10, 2),
+    Discount DECIMAL(10, 2),
+    Quantity INT,
+    Profit DECIMAL(10, 2),
+    Tax DECIMAL(10, 2),
+    Shipping_Cost DECIMAL(10, 2)
+);
+
+
+-- Insert data into market_fact_full
+INSERT INTO market_fact_full (Record_ID, Order_ID, Product_ID, Shipping_ID, Customer_ID, Sales_Amount, Discount, Quantity, Profit, Tax, Shipping_Cost) VALUES
+(1, 'Ord_5446', 'Prod_16', 'SHP_7609', 'Cust_1818', 136.81, 0.01, 23, -30.51, 3.60, 0.56),
+(2, 'Ord_5406', 'Prod_13', 'SHP_7549', 'Cust_1818', 42.27, 0.01, 13, 4.56, 0.93, 0.54),
+(3, 'Ord_5446', 'Prod_4', 'SHP_7610', 'Cust_1818', 4701.69, 0.00, 26, 1148.90, 2.50, 0.59),
+(4, 'Ord_5456', 'Prod_6', 'SHP_7625', 'Cust_1818', 2337.89, 0.09, 43, 729.34, 14.30, 0.37),
+(5, 'Ord_5485', 'Prod_17', 'SHP_7664', 'Cust_1818', 4233.15, 0.08, 35, 1219.87, 26.30, 0.38),
+(6, 'Ord_5497', 'Prod_4', 'SHP_7672', 'Cust_1819', 120.45, 0.02, 25, -58.40, 8.50, 0.42),
+(7, 'Ord_5523', 'Prod_1', 'SHP_7624', 'Cust_1820', 5989.14, 0.10, 30, 1493.77, 9.60, 0.55),
+(8, 'Ord_5506', 'Prod_16', 'SHP_7665', 'Cust_1821', 1670.47, 0.07, 22, 500.18, 2.20, 0.60),
+(9, 'Ord_5555', 'Prod_2', 'SHP_7601', 'Cust_1822', 1284.90, 0.09, 21, 130.17, 7.10, 0.50),
+(10, 'Ord_5500', 'Prod_5', 'SHP_7622', 'Cust_1823', 3207.10, 0.05, 18, 299.79, 4.30, 0.48);
+
+
+INSERT INTO market_fact_full (Record_ID, Order_ID, Product_ID, Shipping_ID, Customer_ID, Sales_Amount, Discount, Quantity, Profit, Tax, Shipping_Cost) VALUES
+(11, 'Ord_5501', 'Prod_5', 'SHP_7623', 'Cust_1824', 3207.10, 0.05, 18, 299.79, 4.30, 0.42);
+
+
+INSERT INTO market_fact_full (Record_ID, Order_ID, Product_ID, Shipping_ID, Customer_ID, Sales_Amount, Discount, Quantity, Profit, Tax, Shipping_Cost) VALUES
+(12, 'Ord_5501', 'Prod_5', 'SHP_7624', 'Cust_1824', 3207.10, 0.05, 18, 299.79, 4.30, 0.42),
+(13, 'Ord_5501', 'Prod_5', 'SHP_7625', 'Cust_1824', 3207.10, 0.05, 18, 299.79, 4.30, 0.43);
+
+
+SELECT count(*) FROM market_fact_full;
+SELECT Shipping_ID, Shipping_Cost,
+RANK() OVER (ORDER BY Shipping_Cost) as shipping_cost_rank
+FROM market_fact_full;
+
+
+SELECT Shipping_ID, Shipping_Cost,
+DENSE_RANK() OVER (ORDER BY Shipping_Cost) as shipping_cost_rank
+FROM market_fact_full;
+
+
+SELECT Shipping_ID, Shipping_Cost,
+RANK() OVER (ORDER BY Shipping_Cost) as shipping_cost_rank,
+DENSE_RANK() OVER (ORDER BY Shipping_Cost) as shipping_cost_dense_rank
+FROM market_fact_full;
+
+
+SELECT Customer_ID, Shipping_Cost, 
+RANK() OVER (PARTITION BY Customer_ID ORDER BY Shipping_Cost) as shipping_cost_rank
+FROM market_fact_full;
+
+
+-- Practice Question 1: Ranking customers by total sales
+
+
+SELECT Customer_ID, SUM(Sales_Amount),
+RANK() OVER(ORDER BY SUM(Sales_Amount)) as sales_rank
+FROM market_fact_full
+GROUP BY Customer_ID;
+
+
+SELECT * FROM market_fact_full;
+-- Case Statements
+
+
+-- Shipping_Cost > 0.5 --> High
+-- Shipping_Cost <= 0.5 and Shipping_Cost > 0.45 --> 'Medium'
+-- ELSE 'Low'
+
+
+SELECT *,
+CASE
+        WHEN Shipping_Cost > 0.5 THEN 'High'
+    WHEN Shipping_Cost <= 0.5 and Shipping_Cost > 0.45 THEN 'Medium'
+    ELSE 'Low'
+END AS shipping_cost_category
+FROM market_fact_full;
+
+
+-- CTE (Common Table Expressions)
+WITH CTE2 AS(
+WITH CTE1 AS
+(SELECT Customer_ID, SUM(Sales_Amount) as total_sales
+FROM market_fact_full
+GROUP BY Customer_ID)
+SELECT Customer_ID, total_sales,
+RANK() OVER (ORDER BY total_sales) as sales_rank
+FROM CTE1)
+SELECT *,
+CASE
+    WHEN sales_rank <4 THEN 'Good'
+    ELSE 'Bad'
+END AS Customer_tag
+FROM CTE2;
+
+
+-- Practice Problem 2: Use CASE statements to classify customers by sales tiers
+
+
+ total_sales > 5000 'Platinum'
+ total_sales BETWEEN 3000 AND 5000 'Gold'
+ total_sales BETWEEN 1000 AND 2999 'Silver'
+ ELSE 'Regular'
+
+
+WITH total_sales AS (
+    SELECT Customer_ID, SUM(Sales_Amount) AS total_sales
+    FROM market_fact_full
+    GROUP BY Customer_ID
+)
+SELECT
+    Customer_ID,
+    total_sales,
+    CASE
+        WHEN total_sales > 5000 THEN 'Platinum'
+        WHEN total_sales BETWEEN 3000 AND 5000 THEN 'Gold'
+        WHEN total_sales BETWEEN 1000 AND 2999 THEN 'Silver'
+        ELSE 'Regular'
+    END AS sales_tier
+FROM total_sales;
+
+
+-- Practice Problem 3: Identify customers with increasing sales trends (use LEAD/LAG)
+
+
+SELECT Customer_id, Order_Id, Sales_Amount,
+LEAD(Sales_Amount) OVER (PARTITION BY Customer_id ORDER BY Order_Id) AS next_sales
+FROM market_fact_full
+
+
+
+
+
+
+-- UDF (User-Defined Functions)
+
+
+DELIMITER $$
+CREATE FUNCTION fetch_shipping_cost(id VARCHAR(50)) 
+RETURNS FLOAT
+DETERMINISTIC
+BEGIN
+DECLARE output FLOAT;
+SELECT Shipping_Cost INTO output FROM market_fact_full WHERE Shipping_ID = id;
+RETURN output;
+END $$
+DELIMITER ;
+
+
+SELECT fetch_shipping_cost('SHP_7622'); 
+
+
+DELIMITER $$
+CREATE PROCEDURE fetch_data(id VARCHAR(50)) -- datatype of input
+BEGIN
+SELECT * FROM market_fact_full where Customer_ID = ID;
+END $$
+DELIMITER ;
+
+
+CALL fetch_data('Cust_1824');
+
+
+-- Query Optimisation
+-- USE LIMIT
+-- AVOID USING *, INSTEAD USE SPECIFIC COLUMNS
+-- USE INDEXING
+-- AVOID USING JOINS IF NOT NEEDED
